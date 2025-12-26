@@ -58,3 +58,43 @@ UPDATE Books
 SET sale_price = purchase_price * 1.10 * 1.25,
     purchase_price = purchase_price * 1.10
 WHERE publisher_id = 1;
+
+-- ============================================
+-- КОНТРОЛЬНО-ОЦЕНОЧНОЕ ЗАДАНИЕ 4: ТРИГЕР
+-- ============================================
+DELIMITER $$
+
+CREATE TRIGGER trg_prodazha_update_sklad
+BEFORE INSERT ON prodazhi
+FOR EACH ROW
+BEGIN
+    DECLARE v_ostatok INT;
+    
+    -- Получаем текущий остаток на складе
+    SELECT kol_sklad INTO v_ostatok
+    FROM knigi
+    WHERE ISBN = NEW.ISBN;
+    
+    -- Проверяем достаточность остатка
+    IF v_ostatok < NEW.kol_prod THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Ошибка: Недостаточно книг на складе. Остаток: ' || v_ostatok;
+    ELSE
+        -- Уменьшаем остаток на складе
+        UPDATE knigi
+        SET kol_sklad = kol_sklad - NEW.kol_prod
+        WHERE ISBN = NEW.ISBN;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- Контрольно-оценочное задание 5: Резервное копирование
+-- Для MySQL (выполнить в командной строке):
+-- mysqldump -u root -p bookshop > C:\Users\%USERNAME%\Desktop\bookshop_backup.sql
+
+-- Для PostgreSQL:
+-- pg_dump -U postgres bookshop > C:\Users\%USERNAME%\Desktop\bookshop_backup.sql
+
+-- Для SQL Server:
+-- BACKUP DATABASE bookshop TO DISK = 'C:\Users\%USERNAME%\Desktop\bookshop_backup.bak'
